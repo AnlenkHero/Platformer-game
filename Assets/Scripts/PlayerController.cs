@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -18,7 +19,17 @@ public class PlayerMovement : MonoBehaviour
     private float _currentHorizontalSpeed;
     private float horizontal;
 
-    
+    [Header("Dash properties")]
+    [SerializeField] private float dashingPower;
+    [SerializeField] private float dashingTime;
+    [SerializeField] private float dashingCooldown;
+    [SerializeField] private int maxAdditionalDashes;
+    private float _recoverDashTime;
+    private int _remainingDashes;
+    private bool _canDash = true;
+    private bool _isDashing;
+
+
     [Header("Jump properties")]
     [SerializeField] private float jumpForce;
     [SerializeField] private int maxAdditionalJumps = 2;
@@ -26,8 +37,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpMultiplier;
     [SerializeField] private float jumpTime;
     private bool _isJumping;
-    private float _jumpCounter;
     private bool _isJump;
+    private float _jumpCounter;
     private int _remainingJumps;
     
     [Header("Wall Jump properties")]
@@ -39,17 +50,30 @@ public class PlayerMovement : MonoBehaviour
     private float wallJumpingCounter;
     
     [Header("Wall sliding properties")]
-    private bool isWallSliding;
     [SerializeField] private float wallSlidingSpeed = 2f;
+    private bool isWallSliding;
 
 
     void Start()
     {
+        _remainingDashes = maxAdditionalDashes;
         _vecGravity = new Vector2(0, -Physics2D.gravity.y);
     }
 
     private void Update()
     {
+        if(_isDashing)
+            return;
+
+        if (_remainingDashes != maxAdditionalDashes)
+        {
+             _recoverDashTime += Time.deltaTime;
+             if (_recoverDashTime >= dashingCooldown)
+             {
+                 _remainingDashes++;
+                 _recoverDashTime = 0;
+             }
+        }
         horizontal = Input.GetAxisRaw("Horizontal");
 
         if (IsGrounded() && !Input.GetKeyDown(KeyCode.Space))
@@ -77,6 +101,12 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
         }
 
+        if (Input.GetKeyDown(KeyCode.LeftShift) && _canDash && _remainingDashes>0)
+        {
+            _remainingDashes--;
+            StartCoroutine(Dash());
+        }
+
         WallSlide();
         WallJump();
 
@@ -88,6 +118,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if(_isDashing)
+            return;
+        
         if (!isWallJumping)
         {
             if (IsGrounded())
@@ -105,7 +138,7 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                _currentHorizontalSpeed = maxHorizontalSpeed * horizontal;
+                _currentHorizontalSpeed = maxHorizontalSpeed * 0.75f * horizontal;
             }
 
             rb.velocity = new Vector2(_currentHorizontalSpeed, rb.velocity.y);
@@ -170,6 +203,18 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private IEnumerator Dash()
+    {
+        _canDash = false;
+        _isDashing = true;
+        float originalGravity = rb.gravityScale;
+        rb.gravityScale = 0;
+        rb.velocity = new Vector2(transform.localScale.x * dashingPower, 0f);
+        yield return new WaitForSeconds(dashingTime);
+        rb.gravityScale = originalGravity;
+        _isDashing = false;
+        _canDash = true;
+    }
     private void Jump()
     {
         rb.AddForce(new Vector2(0, jumpForce), ForceMode2D.Impulse);

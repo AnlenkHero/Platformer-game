@@ -796,25 +796,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4dfde05a8e9839f48b38f2aaf6039ef0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wallJumpingTime: 0.2
-  wallJumpingDuration: 0.3
-  wallJumpingPower: {x: 8, y: 16}
   rb: {fileID: 986222173}
-  wallCheck: {fileID: 1045723567}
-  wallLayer:
-    serializedVersion: 2
-    m_Bits: 128
-  jumpForce: 18
-  maxHorizontalSpeed: 10
-  accelerationTime: 0.15
-  brakingTime: 0.5
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
+  wallLayer:
+    serializedVersion: 2
+    m_Bits: 128
   groundCheck: {fileID: 658633637}
+  wallCheck: {fileID: 1045723567}
+  maxHorizontalSpeed: 10
+  accelerationTime: 0.15
+  brakingTime: 0.5
+  dashingPower: 24
+  dashingTime: 0.2
+  dashingCooldown: 1
+  maxAdditionalDashes: 3
+  jumpForce: 18
+  maxAdditionalJumps: 2
   fallMultiplier: 5
   jumpMultiplier: 2.5
   jumpTime: 0.2
+  wallJumpingTime: 0.2
+  wallJumpingDuration: 0.3
+  wallJumpingPower: {x: 8, y: 16}
+  wallSlidingSpeed: 2
 --- !u!1 &1045723566
 GameObject:
   m_ObjectHideFlags: 0
