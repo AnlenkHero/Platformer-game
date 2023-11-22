@@ -12,8 +12,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform wallCheck;
     [SerializeField] private Transform ladderCheck;
     private Vector2 _vecGravity;
-    private bool _isFacingRight = true;
     private float _originalGravity;
+    private bool _isFacingRight = true;
 
     [Header("Movement properties")] 
     [SerializeField] private float maxHorizontalSpeed = 10f;
@@ -26,11 +26,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float dashingPower = 24f;
     [SerializeField] private float dashingTime = 0.2f;
     [SerializeField] private float dashingCooldown = 3f;
+    [SerializeField] private float dashVerticalForce = 1.5f;
     [SerializeField] private int maxAdditionalDashes =3;
     [SerializeField] private int diagonalDashCost = 2;
+    [SerializeField] private int defaultDashCost = 1;
     private float _recoverDashTime;
     private float _dashVerticalDirection;
-    private float _dashVerticalForce = 1.5f;
     private int _remainingDashes;
     private bool _canDash = true;
     private bool _isDashing;
@@ -43,18 +44,21 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpMultiplier = 2.5f;
     [SerializeField] private float jumpTime = 0.2f;
     [SerializeField] private int maxAdditionalJumps = 2;
-    private bool _isJumping;
-    private bool _isJump;
     private float _jumpCounter;
     private int _remainingJumps;
+    private bool _isJumping;
+    private bool _isJump;
 
     [Header("Wall Jump properties")] 
+    [SerializeField] private Vector2 wallJumpingPower = new Vector2(10f, 10f);
     [SerializeField] private float wallJumpingTime = 0.2f;
     [SerializeField] private float wallJumpingDuration = 0.2f;
-    [SerializeField] private Vector2 wallJumpingPower = new Vector2(10f, 10f);
-    private bool _isWallJumping;
+    [SerializeField] private float wallJumpCooldown = 1.5f;
     private float _wallJumpingDirection;
     private float _wallJumpingCounter;
+    private float _recoverWallJumpTime;
+    private int _lastWallId;
+    private bool _isWallJumping;
 
     [Header("Wall sliding properties")] 
     [SerializeField] private float wallSlidingSpeed = 2f;
@@ -68,6 +72,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
+        _lastWallId = -1;
         _originalGravity = rb.gravityScale;
         _remainingDashes = maxAdditionalDashes;
         _vecGravity = new Vector2(0, -Physics2D.gravity.y);
@@ -76,27 +81,20 @@ public class PlayerMovement : MonoBehaviour
     private void Update()
     {
         _horizontal = Input.GetAxisRaw("Horizontal");
+        
         DashRecover();
+        WallJumpRecover();
         RenewAdditionalJumps();
         CheckJumpCondition();
         CheckDashCondition();
-
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            _isJumping = false;
-            _jumpCounter = 0;
-        }
-        
+        ResetJumpCounter();
         WallSlide();
         WallJump();
         
-
         if (!_isWallJumping)
-        {
             Flip();
-        }
     }
-
+    
     private void FixedUpdate()
     {
         if (_isDashing)
@@ -109,9 +107,8 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = new Vector2(_wallJumpingDirection * wallJumpingPower.x, wallJumpingPower.y);
         
         if (!_isWallJumping)
-        {
             HandleMovement();
-        }
+        
         if (_shouldDash)
         {
             PerformDash();
@@ -119,10 +116,8 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (_isJump)
-        {
             Jump();
-        }
-
+        
         LadderClimb();
         ApplyJumpPhysics();
     }
@@ -161,7 +156,7 @@ public class PlayerMovement : MonoBehaviour
     }
     private void WallSlide()
     {
-        if (IsWalled() && !IsGrounded() && _horizontal != 0f)
+        if (IsWalled().Item1 && !IsGrounded() && _horizontal != 0f)
         {
             _isWallSliding = true;
         }
@@ -257,6 +252,15 @@ public class PlayerMovement : MonoBehaviour
         }
         
     }
+    
+    private void ResetJumpCounter()
+    {
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            _isJumping = false;
+            _jumpCounter = 0;
+        }
+    }
 
     #endregion
     
@@ -287,12 +291,12 @@ public class PlayerMovement : MonoBehaviour
             if (Input.GetKey(KeyCode.W) && _remainingDashes >= diagonalDashCost)
             {
                 _remainingDashes -= diagonalDashCost;
-                _dashVerticalDirection = _dashVerticalForce;
+                _dashVerticalDirection = dashVerticalForce;
                 _shouldDash = true;
             }
             else if (!Input.GetKey(KeyCode.W))
             {
-                _remainingDashes--;
+                _remainingDashes -= defaultDashCost;
                 _dashVerticalDirection = 0;
                 _shouldDash = true;
             }
@@ -318,7 +322,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void WallJump()
     {
-        if (_isWallSliding)
+        var (isWalled, wallId) = IsWalled();
+        if (_isWallSliding && wallId != _lastWallId)
         {
             _isWallJumping = false;
             _wallJumpingDirection = -transform.localScale.x;
@@ -332,6 +337,8 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (!Input.GetKeyDown(KeyCode.Space) || IsGrounded() || !(_wallJumpingCounter > 0f)) return;
+        
+        _lastWallId = wallId;
         _isWallJumping = true;
         _wallJumpingCounter = 0f;
 
@@ -351,6 +358,18 @@ public class PlayerMovement : MonoBehaviour
         _isWallJumping = false;
     }
 
+    private void WallJumpRecover()
+    {
+        if (_lastWallId != -1)
+        {
+            _recoverWallJumpTime += Time.deltaTime;
+            if (_recoverWallJumpTime >= wallJumpCooldown)
+            {
+                _lastWallId = -1;
+                _recoverWallJumpTime = 0;
+            }
+        }
+    }
     #endregion
 
     #region LayerCheck
@@ -359,9 +378,10 @@ public class PlayerMovement : MonoBehaviour
         return Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
     }
 
-    private bool IsWalled()
+    private (bool,int) IsWalled()
     {
-        return Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
+        var wallCollider = Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
+        return wallCollider ? (true, wallCollider.GetInstanceID()) : (false, -1);
     }
 
     private bool IsLadder()
