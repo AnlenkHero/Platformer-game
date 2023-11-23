@@ -27,7 +27,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float dashingTime = 0.2f;
     [SerializeField] private float dashingCooldown = 3f;
     [SerializeField] private float dashVerticalForce = 1.5f;
-    [SerializeField] private int maxAdditionalDashes =3;
+    [SerializeField] private int maxDashCharges = 3;
     [SerializeField] private int diagonalDashCost = 2;
     [SerializeField] private int defaultDashCost = 1;
     private float _recoverDashTime;
@@ -36,7 +36,6 @@ public class PlayerMovement : MonoBehaviour
     private bool _canDash = true;
     private bool _isDashing;
     private bool _shouldDash;
-
 
     [Header("Jump properties")] 
     [SerializeField] private float jumpForce = 18f;
@@ -64,7 +63,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float wallSlidingSpeed = 2f;
     private bool _isWallSliding;
     
-    
     [Header("Ladder climbing properties")] 
     [SerializeField] private float ladderClimbingUpSpeed = 6f;
     [SerializeField] private float ladderClimbingDownSpeed = 3f;
@@ -74,14 +72,14 @@ public class PlayerMovement : MonoBehaviour
     {
         _lastWallId = -1;
         _originalGravity = rb.gravityScale;
-        _remainingDashes = maxAdditionalDashes;
+        _remainingDashes = maxDashCharges;
         _vecGravity = new Vector2(0, -Physics2D.gravity.y);
     }
 
     private void Update()
     {
         _horizontal = Input.GetAxisRaw("Horizontal");
-        
+
         DashRecover();
         WallJumpRecover();
         RenewAdditionalJumps();
@@ -90,25 +88,25 @@ public class PlayerMovement : MonoBehaviour
         ResetJumpCounter();
         WallSlide();
         WallJump();
-        
+
         if (!_isWallJumping)
             Flip();
     }
-    
+
     private void FixedUpdate()
     {
         if (_isDashing)
             return;
-        
-        if(_isWallSliding)
+
+        if (_isWallSliding)
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlidingSpeed, float.MaxValue));
-        
+
         if (_isWallJumping)
             rb.velocity = new Vector2(_wallJumpingDirection * wallJumpingPower.x, wallJumpingPower.y);
-        
+
         if (!_isWallJumping)
             HandleMovement();
-        
+
         if (_shouldDash)
         {
             PerformDash();
@@ -117,11 +115,11 @@ public class PlayerMovement : MonoBehaviour
 
         if (_isJump)
             Jump();
-        
+
         LadderClimb();
         ApplyJumpPhysics();
     }
-    
+
     private void HandleMovement()
     {
         if (IsGrounded())
@@ -144,6 +142,7 @@ public class PlayerMovement : MonoBehaviour
 
         rb.velocity = new Vector2(_currentHorizontalSpeed, rb.velocity.y);
     }
+
     private void Flip()
     {
         if (_isFacingRight && _horizontal < 0f || !_isFacingRight && _horizontal > 0f)
@@ -154,6 +153,7 @@ public class PlayerMovement : MonoBehaviour
             transform.localScale = localScale;
         }
     }
+
     private void WallSlide()
     {
         if (IsWalled().Item1 && !IsGrounded() && _horizontal != 0f)
@@ -165,6 +165,7 @@ public class PlayerMovement : MonoBehaviour
             _isWallSliding = false;
         }
     }
+
     private void LadderClimb()
     {
         if (IsLadder())
@@ -173,17 +174,18 @@ public class PlayerMovement : MonoBehaviour
             if (_horizontal != 0f)
             {
                 rb.gravityScale = _originalGravity;
-                rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, ladderClimbingUpSpeed, float.MaxValue));
+                rb.velocity = new Vector2(rb.velocity.x,
+                    Mathf.Clamp(rb.velocity.y, ladderClimbingUpSpeed, float.MaxValue));
             }
-            else if(Input.GetKey(KeyCode.S))
+            else if (Input.GetKey(KeyCode.S))
             {
                 rb.gravityScale = 0f;
-                rb.velocity = new Vector2(rb.velocity.x,  -ladderClimbingDownSpeed);
+                rb.velocity = new Vector2(rb.velocity.x, -ladderClimbingDownSpeed);
             }
             else
             {
                 rb.gravityScale = 0;
-                rb.velocity = new Vector2(rb.velocity.x, 0f); 
+                rb.velocity = new Vector2(rb.velocity.x, 0f);
             }
         }
         else
@@ -197,21 +199,21 @@ public class PlayerMovement : MonoBehaviour
 
     private void Jump()
     {
-        rb.velocity = new Vector2(rb.velocity.x,  jumpForce);
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
         _isJump = false;
     }
+
     private void CheckJumpCondition()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && (_remainingJumps > 0 || IsGrounded()) && !_isWallSliding &&
-            !_isLadderClimbing && !_isWallJumping && _wallJumpingCounter < 0f)
-        {
-            _isJump = true;
-            _isJumping = true;
-            _jumpCounter = 0;
-            _remainingJumps--;
-        }
+        if (!Input.GetKeyDown(KeyCode.Space) || (_remainingJumps <= 0 && !IsGrounded()) || _isWallSliding ||
+            _isLadderClimbing || _isWallJumping || !(_wallJumpingCounter < 0f)) return;
+        
+        _isJump = true;
+        _isJumping = true;
+        _jumpCounter = 0;
+        _remainingJumps--;
     }
-    
+
 
     private void RenewAdditionalJumps()
     {
@@ -220,7 +222,7 @@ public class PlayerMovement : MonoBehaviour
             _remainingJumps = maxAdditionalJumps;
         }
     }
-    
+
     private void ApplyJumpPhysics()
     {
         if (rb.velocity.y > 0 && _isJumping)
@@ -240,7 +242,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (_isWallJumping) return;
-        
+
         if (rb.velocity.y > 0 && !_isJumping)
         {
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.6f);
@@ -250,9 +252,8 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.velocity -= _vecGravity * (fallMultiplier * Time.deltaTime);
         }
-        
     }
-    
+
     private void ResetJumpCounter()
     {
         if (Input.GetKeyUp(KeyCode.Space))
@@ -263,7 +264,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     #endregion
-    
+
     #region Dash
 
     private void PerformDash()
@@ -302,10 +303,10 @@ public class PlayerMovement : MonoBehaviour
             }
         }
     }
-    
+
     private void DashRecover()
     {
-        if (_remainingDashes != maxAdditionalDashes)
+        if (_remainingDashes != maxDashCharges)
         {
             _recoverDashTime += Time.deltaTime;
             if (_recoverDashTime >= dashingCooldown)
@@ -337,7 +338,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (!Input.GetKeyDown(KeyCode.Space) || IsGrounded() || !(_wallJumpingCounter > 0f)) return;
-        
+
         _lastWallId = wallId;
         _isWallJumping = true;
         _wallJumpingCounter = 0f;
@@ -370,15 +371,17 @@ public class PlayerMovement : MonoBehaviour
             }
         }
     }
+
     #endregion
 
     #region LayerCheck
+
     private bool IsGrounded()
     {
         return Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
     }
 
-    private (bool,int) IsWalled()
+    private (bool, int) IsWalled()
     {
         var wallCollider = Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
         return wallCollider ? (true, wallCollider.GetInstanceID()) : (false, -1);
@@ -388,5 +391,6 @@ public class PlayerMovement : MonoBehaviour
     {
         return Physics2D.OverlapCircle(ladderCheck.position, 0.1f, ladderLayer);
     }
+
     #endregion
 }

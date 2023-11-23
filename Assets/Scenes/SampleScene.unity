@@ -842,21 +842,24 @@ MonoBehaviour:
   wallCheck: {fileID: 1045723567}
   ladderCheck: {fileID: 930805239}
   maxHorizontalSpeed: 10
-  accelerationTime: 0.15
-  brakingTime: 0.5
+  accelerationTime: 0.1
+  brakingTime: 0.4
   dashingPower: 24
   dashingTime: 0.2
   dashingCooldown: 3
-  maxAdditionalDashes: 3
+  dashVerticalForce: 1.5
+  maxDashCharges: 3
   diagonalDashCost: 2
+  defaultDashCost: 1
   jumpForce: 18
   fallMultiplier: 5
   jumpMultiplier: 2.5
   jumpTime: 0.2
   maxAdditionalJumps: 2
+  wallJumpingPower: {x: 10, y: 10}
   wallJumpingTime: 0.2
   wallJumpingDuration: 0.2
-  wallJumpingPower: {x: 10, y: 10}
+  wallJumpCooldown: 1.5
   wallSlidingSpeed: 2
   ladderClimbingUpSpeed: 9
   ladderClimbingDownSpeed: 1.5
