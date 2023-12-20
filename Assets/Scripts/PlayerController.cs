@@ -4,6 +4,7 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("General properties")] 
+    public static PlayerMovement Instance;
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private LayerMask wallLayer;
@@ -68,8 +69,19 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float ladderClimbingDownSpeed = 3f;
     private bool _isLadderClimbing;
 
+    [Header("Grappling")] 
+    [SerializeField] private Transform gunPivot;
+    public bool isGrappling;
+    public bool isPhysicsCanceledAfterGrapple;
+    
+
     private void Start()
     {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+        
         _lastWallId = -1;
         _originalGravity = rb.gravityScale;
         _remainingDashes = maxDashCharges;
@@ -78,26 +90,31 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-        _horizontal = Input.GetAxisRaw("Horizontal");
-
         DashRecover();
+        RenewPhysics();
         WallJumpRecover();
+        ResetJumpCounter();
         RenewAdditionalJumps();
+        
+        if (_isDashing || (isGrappling && !IsGrounded()) || isPhysicsCanceledAfterGrapple)
+            return;
+        
+        _horizontal = Input.GetAxisRaw("Horizontal");
+        
+        WallJump();
+        WallSlide();
         CheckJumpCondition();
         CheckDashCondition();
-        ResetJumpCounter();
-        WallSlide();
-        WallJump();
-
-        if (!_isWallJumping)
-            Flip();
     }
 
     private void FixedUpdate()
     {
-        if (_isDashing)
+        if (_isDashing || (isGrappling && !IsGrounded()) || isPhysicsCanceledAfterGrapple)
             return;
 
+        if (!_isWallJumping)
+            Flip();
+        
         if (_isWallSliding)
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlidingSpeed, float.MaxValue));
 
@@ -142,18 +159,21 @@ public class PlayerMovement : MonoBehaviour
 
         rb.velocity = new Vector2(_currentHorizontalSpeed, rb.velocity.y);
     }
-
     private void Flip()
     {
         if (_isFacingRight && _horizontal < 0f || !_isFacingRight && _horizontal > 0f)
         {
             _isFacingRight = !_isFacingRight;
-            Vector3 localScale = transform.localScale;
-            localScale.x *= -1f;
-            transform.localScale = localScale;
+            
+            Vector3 playerScale = transform.localScale;
+            playerScale.x *= -1f;
+            transform.localScale = playerScale;
+            
+            Vector3 gunScale = gunPivot.localScale;
+            gunScale.x *= -1f;
+            gunPivot.localScale = gunScale;
         }
     }
-
     private void WallSlide()
     {
         if (IsWalled().Item1 && !IsGrounded() && _horizontal != 0f)
@@ -165,7 +185,6 @@ public class PlayerMovement : MonoBehaviour
             _isWallSliding = false;
         }
     }
-
     private void LadderClimb()
     {
         if (IsLadder())
@@ -194,7 +213,12 @@ public class PlayerMovement : MonoBehaviour
             _isLadderClimbing = false;
         }
     }
-
+    private void RenewPhysics()
+    {
+        if (Input.anyKey && !isGrappling)
+            isPhysicsCanceledAfterGrapple = false;
+    }
+    
     #region Jump
 
     private void Jump()
@@ -346,9 +370,14 @@ public class PlayerMovement : MonoBehaviour
         if (transform.localScale.x != _wallJumpingDirection)
         {
             _isFacingRight = !_isFacingRight;
-            Vector3 localScale = transform.localScale;
-            localScale.x *= -1f;
-            transform.localScale = localScale;
+            
+            Vector3 playerScale = transform.localScale;
+            playerScale.x *= -1f;
+            transform.localScale = playerScale;
+            
+            Vector3 gunScale = gunPivot.localScale;
+            gunScale.x *= -1f;
+            gunPivot.localScale = gunScale;
         }
 
         Invoke(nameof(StopWallJumping), wallJumpingDuration);
